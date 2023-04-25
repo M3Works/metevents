@@ -22,13 +22,13 @@ class TestBaseTimePeriod:
     @pytest.mark.parametrize('data, expected', [
         ([1, 1, 2, 2], datetime(2023, 1, 4))
     ])
-    def test_end(self, period, data, expected):
+    def test_stop(self, period, data, expected):
         period.stop == expected
 
     @pytest.mark.parametrize('data, expected', [
         ([1, 1, 2, 2], timedelta(days=3))
     ])
-    def test_end(self, period, data, expected):
+    def test_duration(self, period, data, expected):
         assert period.duration == expected
 
 
@@ -42,7 +42,6 @@ class TestCumulativePeriod:
     @pytest.mark.parametrize('data, expected', [
         ([1, 1, 2, 2], 6),
         ([1, np.NaN, 2, 2], 5)
-
     ])
     def test_end(self, period, data, expected):
         assert period.total == expected

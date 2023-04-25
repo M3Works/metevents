@@ -2,7 +2,6 @@ import numpy as np
 from .periods import CumulativePeriod
 import pandas as pd
 from datetime import timedelta
-import metloom
 from metloom.pointdata import CDECPointData, SnotelPointData, MesowestPointData
 from pandas.tseries.frequencies import to_offset
 from .utilities import determine_freq
@@ -79,8 +78,10 @@ class StormEvents(BaseEvents):
             stop = time_range.max()
             evt = CumulativePeriod(self.data.loc[start:stop])
             self._events.append(evt)
+
     @classmethod
-    def from_station(cls, station_id, start, stop, station_name='unknown', source='NRCS'):
+    def from_station(cls, station_id, start, stop, station_name='unknown',
+                     source='NRCS'):
         """
 
         Form storm analysis from metloom
@@ -100,7 +101,8 @@ class StormEvents(BaseEvents):
                 break
 
         if pnt is None:
-            raise ValueError(f'Datasource {source} is invalid. Use {", ".join([c.DATASOURCE for c in pnt_classes])}')
+            raise ValueError(f'Datasource {source} is invalid. Use '
+                             f'{", ".join([c.DATASOURCE for c in pnt_classes])}')
 
         # Pull data
         variable = pnt.ALLOWED_VARIABLES.PRECIPITATIONACCUM

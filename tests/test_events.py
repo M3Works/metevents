@@ -1,5 +1,4 @@
-from datetime import datetime, timedelta, tzinfo
-import pytz
+from datetime import datetime, timedelta
 import numpy as np
 import pandas as pd
 import pytest
@@ -15,7 +14,8 @@ def series(data):
 
 
 @pytest.mark.parametrize('data, expected', [
-    ([True, True, False], [timedelta(days=2), timedelta(days=2), np.datetime64('NaT')]),
+    ([True, True, False], [timedelta(days=2), timedelta(days=2),
+                           np.datetime64('NaT')]),
 ])
 def test_get_start_stop(series, data, expected):
     start_stop = BaseEvents.get_timedelta(series)
@@ -44,14 +44,15 @@ def test_storm_events(series, data, mass, hours, n_storms):
 
 
 @pytest.mark.parametrize('station_id, start, stop, source, mass, hours, n_storms', [
-    ('TUM', datetime(2021, 12, 1, tzinfo=pytz.UTC), datetime(2022, 1, 15, tzinfo=pytz.UTC), 'CDEC', 0.1, 48, 3),
-    ('637:ID:SNTL', datetime(2022, 12, 1, tzinfo=pytz.UTC), datetime(2022, 12, 15, tzinfo=pytz.UTC), 'NRCS', 0.1, 48, 2)
+    ('TUM', datetime(2021, 12, 1), datetime(2022, 1, 15), 'CDEC', 0.1, 48, 3),
+    ('637:ID:SNTL', datetime(2022, 12, 1, ), datetime(2022, 12, 15),
+     'NRCS', 0.1, 48, 2)
 
 ])
-def test_storm_events_from_station(station_id, start, stop, source, mass, hours, n_storms):
+def test_storm_events_from_station(station_id, start, stop, source, mass, hours,
+                                   n_storms):
     """
-    Test the number of storms identified by varying input data
-    and thresholds.
+    Test the number of storms identified by varying input data and thresholds.
     """
     storms = StormEvents.from_station(station_id, start, stop, source=source)
     storms.find(mass_to_start=mass, hours_to_stop=hours)
