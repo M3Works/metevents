@@ -2,7 +2,6 @@ import numpy as np
 from .periods import CumulativePeriod
 import pandas as pd
 from datetime import timedelta
-from pandas.tseries.frequencies import to_offset
 
 
 class BaseEvents:
@@ -36,7 +35,6 @@ class BaseEvents:
         groups = time_groups.groups
         return groups, ind_sum
 
-
     @classmethod
     def get_timedelta(cls, ind):
         """
@@ -46,11 +44,12 @@ class BaseEvents:
         # group together the continuous true conditions
         groups, ind_sum = cls.group_condition_by_time(ind)
         nat = np.datetime64('NaT')
-        add = pd.to_timedelta(ind.index.freq)
+        add_one = pd.to_timedelta(ind.index.freq)
         # Always add one since we want to include that last timestep
-        result = ind_sum.apply(lambda sum_id: groups[sum_id].max() - groups[sum_id].min() + add if sum_id in groups else nat)
+        result = ind_sum.apply(
+            lambda sum_id: groups[sum_id].max() - groups[sum_id].min() + add_one
+            if sum_id in groups else nat)
         return result
-
 
     @classmethod
     def from_station(cls):
