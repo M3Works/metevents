@@ -11,7 +11,7 @@ with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
 requirements = [
-    'metloom>=0.3.5,<1.0.0',
+    'metevents>=0.3.5,<1.0.0',
 ]
 
 test_requirements = ['pytest>=3', ]
