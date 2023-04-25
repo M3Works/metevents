@@ -25,7 +25,7 @@ class BaseTimePeriod:
     def duration(self):
         if self._duration is None:
             self._duration = self.stop - self.start
-        return self.duration
+        return self._duration
 
     @property
     def data(self):
