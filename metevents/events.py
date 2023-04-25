@@ -1,11 +1,16 @@
 import numpy as np
 from .periods import CumulativePeriod
+import pandas as pd
+from datetime import timedelta
+from pandas.tseries.frequencies import to_offset
 
 
 class BaseEvents:
     def __init__(self, data):
         self._events = []
         self.data = data
+        self._groups = []
+        self._group_ids = None
 
     @property
     def events(self):
@@ -22,14 +27,30 @@ class BaseEvents:
         """
         raise NotImplementedError("Find function not implemented.")
 
-    @classmethod
-    def get_start_stop(cls, ind):
-        """
-        Given a boolean index, find the start stop of True sections
-        """
+    @staticmethod
+    def group_condition_by_time(ind):
         ind_sum = ind.eq(False).cumsum()
-        start_stops = ind_sum.loc[ind.eq(True)].groupby(ind_sum).apply(lambda d: [d.index.min(), d.index.max()])
-        return start_stops
+
+        # Isolate the ind_sum by positions that are True and group them together
+        time_groups = ind_sum.loc[ind.eq(True)].groupby(ind_sum)
+        groups = time_groups.groups
+        return groups, ind_sum
+
+
+    @classmethod
+    def get_timedelta(cls, ind):
+        """
+        Determine the timedelta of each continuous section of boolean thats
+        true. NaT is used when the bool is False
+        """
+        # group together the continuous true conditions
+        groups, ind_sum = cls.group_condition_by_time(ind)
+        nat = np.datetime64('NaT')
+        add = pd.to_timedelta(ind.index.freq)
+        # Always add one since we want to include that last timestep
+        result = ind_sum.apply(lambda sum_id: groups[sum_id].max() - groups[sum_id].min() + add if sum_id in groups else nat)
+        return result
+
 
     @classmethod
     def from_station(cls):
@@ -51,7 +72,12 @@ class StormEvents(BaseEvents):
         least hours_to_stop
         """
         ind = self.data >= mass_to_start
-        start_stops = self.get_start_stop(ind)
-        for (start, stop) in start_stops:
+        delta = self.get_timedelta(ind)
+        ind = ind & (delta >= timedelta(hours=hours_to_stop))
+        groups, _ = self.group_condition_by_time(ind)
+
+        for event_id, time_range in groups.items():
+            start = time_range.min()
+            stop = time_range.max()
             evt = CumulativePeriod(self.data.loc[start:stop])
             self._events.append(evt)
