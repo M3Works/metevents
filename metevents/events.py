@@ -39,45 +39,76 @@ class BaseEvents:
         return groups, ind_sum
 
     @classmethod
-    def get_timedelta(cls, ind):
-        """
-        Determine the timedelta of each continuous section of boolean thats
-        true. NaT is used when the bool is False
-        """
-        # group together the continuous true conditions
-        groups, ind_sum = cls.group_condition_by_time(ind)
-        nat = np.datetime64('NaT')
-        freq = determine_freq(ind)
-        add_one = pd.to_timedelta(to_offset(freq))
-        # Always add one since we want to include that last timestep
-        result = ind_sum.apply(
-            lambda sum_id: groups[sum_id].max() - groups[sum_id].min() + add_one
-            if sum_id in groups else nat)
-        return result
-
-    @classmethod
     def from_station(cls, station_id, start, end):
         raise NotImplementedError('Not implemented')
 
 
 class StormEvents(BaseEvents):
 
-    def find(self, mass_to_start=0.1, hours_to_stop=24):
+    def find(self, instant_mass_to_start=0.1, min_storm_total=0.5, hours_to_stop=24,
+             max_storm_hours=336):
         """
         Find all the storms that are initiated by a mass greater than the
-        mass_to_start and receive less than that threshold for at
-        least hours_to_stop
+        instant_mass_to_start and receive less than that threshold for at
+        least hours_to_stop to end it. Storm delineation is further bounded by
+        min_storm_total and max_storm_hours.
+
+        Args:
+            instant_mass_to_start: mass per time step to consider the beginning of a
+                storm
+            min_storm_total: Total storm mass to be considered a complete storm
+            hours_to_stop: minimum hours of mass less than instant threshold to end a storm
+            max_storm_hours: Maximum hours a storm can.
         """
-        ind = self.data >= mass_to_start
-        delta = self.get_timedelta(ind)
-        ind = ind & (delta >= timedelta(hours=hours_to_stop))
+        # group main condition by time
+        ind = self.data >= instant_mass_to_start
         groups, _ = self.group_condition_by_time(ind)
 
-        for event_id, time_range in groups.items():
-            start = time_range.min()
-            stop = time_range.max()
-            evt = CumulativePeriod(self.data.loc[start:stop])
-            self._events.append(evt)
+        freq = determine_freq(ind)
+        tstep = pd.to_timedelta(to_offset(freq))
+        dt = timedelta(hours=hours_to_stop)
+        max_storm = timedelta(hours=max_storm_hours)
+
+        group_list = sorted(list(groups.items()))
+        N_groups = len(group_list)
+
+        # Evaluate each group of mass conditions against the timing
+        for i, (event_id, curr_group) in enumerate(group_list):
+            curr_start = curr_group.min()
+            curr_stop = curr_group.max()
+            if i == 0:
+                start = curr_start
+
+            # Grab next
+            nx_idx = i + 1
+            if nx_idx < N_groups:
+                next_group = group_list[nx_idx][1]
+                next_start = next_group.min()
+
+            else:
+                next_start = curr_stop
+            # track storm total and no_precip_d
+            total = self.data.loc[start:curr_stop].sum()
+            duration = curr_stop - start
+
+            # Has there been enough hours without mass
+            enough_hours_wo_precip = (next_start - curr_stop) > dt
+            # Has storm gone on too long
+            storm_duration_too_long = duration > max_storm
+            # Has enough mass accumulated to be considered a storm
+            enough_storm_mass = total >= min_storm_total
+
+            condition = (enough_hours_wo_precip or storm_duration_too_long) and enough_storm_mass
+
+            if condition or nx_idx == N_groups:
+                # Watch out for beginning
+                start = start - tstep if start != self.data.index[0] else start
+
+                event = CumulativePeriod(self.data.loc[start:curr_stop])
+                self._events.append(event)
+                # Update start for the next storm
+                start = next_start
+
 
     @classmethod
     def from_station(cls, station_id, start, stop, station_name='unknown',

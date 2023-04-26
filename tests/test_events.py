@@ -13,47 +13,84 @@ def series(data):
     return pd.Series(data, index=DatetimeIndex(index, freq='D'))
 
 
-@pytest.mark.parametrize('data, expected', [
-    ([True, True, False], [timedelta(days=2), timedelta(days=2),
-                           np.datetime64('NaT')]),
-])
-def test_get_start_stop(series, data, expected):
-    start_stop = BaseEvents.get_timedelta(series)
-    exp_series = pd.Series(expected, index=start_stop.index)
-    pd.testing.assert_series_equal(start_stop, exp_series, check_index=False)
+class TestStormEvents:
+    @pytest.fixture()
+    def storms(self, series, data):
+        yield StormEvents(series)
 
+    @pytest.mark.parametrize('data, start_mass, stop_hours, total_mass, max_hours,'
+                             'n_storms', [
+        # Two Storms
+        ([0, 1, 1, 0, 0, 1, 1], 0.1, 24, 1, 300, 2),
+        # Test stopping hours
+        ([0, 0.1, 0.1, 0, 0.1, 0.1], 0.1, 48, 0.1, 300, 1),
+        # Test minimum storm total
+        ([0.1, 0, 0.1, 0.1], 0.1, 24, 0.2, 300, 1),
+        # Test max storm hours
+        ([0, 0.1, 0, 0.1, 0.1, 0], 0.1, 24, 0.1, 24, 2),
 
-@pytest.mark.parametrize('data, mass, hours, n_storms', [
-    # Two storms
-    ([0, 1, 1, 0, 0, 1, 1], 0.1, 24, 2),
-    # Different storm def, emphasizing hours to end, 1 storm
-    ([0, 1, 1, 0.1, 0, 1, 0], 0.1, 48, 1),
-    # No break in the storm
-    ([1, 1, 1], 0.1, 24, 1),
-    # Storm split by mass only
-    ([1, 0.5, 0.1, 0.2, 1], 0.5, 24, 2)
-])
-def test_storm_events(series, data, mass, hours, n_storms):
-    """
-    Test the number of storms identified by varying input data
-    and thresholds.
-    """
-    storms = StormEvents(series)
-    storms.find(mass_to_start=mass, hours_to_stop=hours)
-    assert storms.N == n_storms
+    ])
+    def test_storm_events_N(self, storms, data, start_mass, stop_hours,
+                            total_mass, max_hours, n_storms):
+        """
+        Test the number of storms identified by varying input data
+        and thresholds.
+        """
+        storms.find(instant_mass_to_start=start_mass,
+                    hours_to_stop=stop_hours,
+                    min_storm_total=total_mass,
+                    max_storm_hours=max_hours)
+        assert storms.N == n_storms
 
+    @pytest.mark.parametrize('data, mass, hours, totals', [
+        # Two storms
+        ([0, 1, 1, 0, 0, 1, 1], 0.1, 24, [2, 2]),
+        # Same data but 1 storm using different criteria
+        ([0, 1, 1, 0, 0, 1, 1], 0.1, 72, [4]),
 
-@pytest.mark.parametrize('station_id, start, stop, source, mass, hours, n_storms', [
-    ('TUM', datetime(2021, 12, 1), datetime(2022, 1, 15), 'CDEC', 0.1, 48, 3),
-    ('637:ID:SNTL', datetime(2022, 12, 1, ), datetime(2022, 12, 15),
-     'NRCS', 0.1, 48, 2)
+    ])
+    def test_storm_events_total(self, storms, data, mass, hours, totals):
+        """
+        Test the number of storms identified by varying input data
+        and thresholds.
+        """
+        storms.find(instant_mass_to_start=mass, hours_to_stop=hours)
+        assert [event.total for event in storms.events] == totals
 
-])
-def test_storm_events_from_station(station_id, start, stop, source, mass, hours,
-                                   n_storms):
-    """
-    Test the number of storms identified by varying input data and thresholds.
-    """
-    storms = StormEvents.from_station(station_id, start, stop, source=source)
-    storms.find(mass_to_start=mass, hours_to_stop=hours)
-    assert storms.N == n_storms
+    @pytest.mark.parametrize('data, mass, hours, durations', [
+        # Two storms with clear delineation
+        ([0, 1, 1, 0, 0, 1, 1], 0.1, 24, [2, 2]),
+        # No clear beginning
+        ([0.2, 1, 0, 0, 0.2, 1], 0.1, 24, [1.5, 1.5]),
+        # ([1, 1, 1], 0.1, 24, [3]),
+
+    ])
+    def test_storm_events_duration(self, storms, data, mass, hours, durations):
+        """
+        Test the number of storms identified by varying input data
+        and thresholds.
+        """
+        storms.find(instant_mass_to_start=mass, hours_to_stop=hours)
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots(1)
+        ax.plot(storms.data.cumsum(), 'k-.')
+        for event in storms.events:
+            ax.axvline(event.start, color='green', linestyle='--')
+            ax.axvline(event.stop, color='red', linestyle='--')
+        plt.show()
+        assert [event.duration for event in storms.events] == [timedelta(days=t) for t in durations]
+
+    @pytest.mark.parametrize('station_id, start, stop, source, mass, hours, n_storms', [
+        ('TUM', datetime(2021, 12, 1), datetime(2022, 1, 15), 'CDEC', 0.1, 48, 3),
+        ('637:ID:SNTL', datetime(2022, 12, 1), datetime(2022, 12, 15),
+         'NRCS', 0.1, 48, 2)
+
+    ])
+    def test_storm_events_from_station(self, station_id, start, stop, source, mass, hours,
+                                       n_storms):
+        """
+        Test the number of storms identified by varying input data and thresholds.
+        """
+        storms = StormEvents.from_station(station_id, start, stop, source=source)
+        storms.find(instant_mass_to_start=mass, hours_to_stop=hours)
+        assert storms.N == n_storms

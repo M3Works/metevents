@@ -43,3 +43,6 @@ class CumulativePeriod(BaseTimePeriod):
             self._total = self._data.sum()
 
         return self._total
+
+    def __repr__(self):
+        return f"Cumulative Period ({self.start.isoformat()} - {self.stop.isoformat()})"
