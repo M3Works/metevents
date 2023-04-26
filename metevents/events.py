@@ -1,4 +1,3 @@
-import numpy as np
 from .periods import CumulativePeriod
 import pandas as pd
 from datetime import timedelta
@@ -57,7 +56,8 @@ class StormEvents(BaseEvents):
             instant_mass_to_start: mass per time step to consider the beginning of a
                 storm
             min_storm_total: Total storm mass to be considered a complete storm
-            hours_to_stop: minimum hours of mass less than instant threshold to end a storm
+            hours_to_stop: minimum hours of mass less than instant threshold to
+                end a storm
             max_storm_hours: Maximum hours a storm can.
         """
         # group main condition by time
@@ -97,8 +97,8 @@ class StormEvents(BaseEvents):
             storm_duration_too_long = duration > max_storm
             # Has enough mass accumulated to be considered a storm
             enough_storm_mass = total >= min_storm_total
-
-            condition = (enough_hours_wo_precip or storm_duration_too_long) and enough_storm_mass
+            base_condition = (enough_hours_wo_precip or storm_duration_too_long)
+            condition = (base_condition and enough_storm_mass)
 
             if condition or nx_idx == N_groups:
                 # Watch out for beginning
@@ -108,7 +108,6 @@ class StormEvents(BaseEvents):
                 self._events.append(event)
                 # Update start for the next storm
                 start = next_start
-
 
     @classmethod
     def from_station(cls, station_id, start, stop, station_name='unknown',

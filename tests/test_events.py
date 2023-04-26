@@ -1,10 +1,9 @@
 from datetime import datetime, timedelta
-import numpy as np
 import pandas as pd
 import pytest
 from pandas import DatetimeIndex
 
-from metevents.events import StormEvents, BaseEvents
+from metevents.events import StormEvents
 
 
 @pytest.fixture()
@@ -20,16 +19,15 @@ class TestStormEvents:
 
     @pytest.mark.parametrize('data, start_mass, stop_hours, total_mass, max_hours,'
                              'n_storms', [
-        # Two Storms
-        ([0, 1, 1, 0, 0, 1, 1], 0.1, 24, 1, 300, 2),
-        # Test stopping hours
-        ([0, 0.1, 0.1, 0, 0.1, 0.1], 0.1, 48, 0.1, 300, 1),
-        # Test minimum storm total
-        ([0.1, 0, 0.1, 0.1], 0.1, 24, 0.2, 300, 1),
-        # Test max storm hours
-        ([0, 0.1, 0, 0.1, 0.1, 0], 0.1, 24, 0.1, 24, 2),
+                                 ([0, 1, 1, 0, 0, 1, 1], 0.1, 24, 1, 300, 2),
+                                 # Test stopping hours
+                                 ([0, 0.1, 0.1, 0, 0.1, 0.1], 0.1, 48, 0.1, 300, 1),
+                                 # Test minimum storm total
+                                 ([0.1, 0, 0.1, 0.1], 0.1, 24, 0.2, 300, 1),
+                                 # Test max storm hours
+                                 ([0, 0.1, 0, 0.1, 0.1, 0], 0.1, 24, 0.1, 24, 2),
 
-    ])
+                             ])
     def test_storm_events_N(self, storms, data, start_mass, stop_hours,
                             total_mass, max_hours, n_storms):
         """
@@ -71,7 +69,8 @@ class TestStormEvents:
         and thresholds.
         """
         storms.find(instant_mass_to_start=mass, hours_to_stop=hours)
-        assert [event.duration for event in storms.events] == [timedelta(days=t) for t in durations]
+        assert [event.duration for event in storms.events] == \
+               [timedelta(days=t) for t in durations]
 
     @pytest.mark.parametrize('station_id, start, stop, source, mass, hours, n_storms', [
         ('TUM', datetime(2021, 12, 1), datetime(2022, 1, 15), 'CDEC', 0.1, 48, 5),
@@ -79,11 +78,12 @@ class TestStormEvents:
          'NRCS', 0.1, 48, 2)
 
     ])
-    def test_storm_events_from_station(self, station_id, start, stop, source, mass, hours,
-                                       n_storms):
+    def test_storm_events_from_station(self, station_id, start, stop, source, mass,
+                                       hours, n_storms):
         """
         Test the number of storms identified by varying input data and thresholds.
         """
         storms = StormEvents.from_station(station_id, start, stop, source=source)
-        storms.find(instant_mass_to_start=mass, hours_to_stop=hours, min_storm_total=0.2)
+        storms.find(instant_mass_to_start=mass, hours_to_stop=hours,
+                    min_storm_total=0.2)
         assert storms.N == n_storms
