@@ -61,8 +61,8 @@ class TestStormEvents:
         # Two storms with clear delineation
         ([0, 1, 1, 0, 0, 1, 1], 0.1, 24, [2, 2]),
         # No clear beginning
-        ([0.2, 1, 0, 0, 0.2, 1], 0.1, 24, [1.5, 1.5]),
-        # ([1, 1, 1], 0.1, 24, [3]),
+        ([0.2, 1, 0, 1, 0.2, 1], 0.1, 24, [1, 3]),
+        ([1, 1, 1, 1], 0.1, 24, [3]),
 
     ])
     def test_storm_events_duration(self, storms, data, mass, hours, durations):
@@ -71,17 +71,10 @@ class TestStormEvents:
         and thresholds.
         """
         storms.find(instant_mass_to_start=mass, hours_to_stop=hours)
-        import matplotlib.pyplot as plt
-        fig, ax = plt.subplots(1)
-        ax.plot(storms.data.cumsum(), 'k-.')
-        for event in storms.events:
-            ax.axvline(event.start, color='green', linestyle='--')
-            ax.axvline(event.stop, color='red', linestyle='--')
-        plt.show()
         assert [event.duration for event in storms.events] == [timedelta(days=t) for t in durations]
 
     @pytest.mark.parametrize('station_id, start, stop, source, mass, hours, n_storms', [
-        ('TUM', datetime(2021, 12, 1), datetime(2022, 1, 15), 'CDEC', 0.1, 48, 3),
+        ('TUM', datetime(2021, 12, 1), datetime(2022, 1, 15), 'CDEC', 0.1, 48, 5),
         ('637:ID:SNTL', datetime(2022, 12, 1), datetime(2022, 12, 15),
          'NRCS', 0.1, 48, 2)
 
@@ -92,5 +85,5 @@ class TestStormEvents:
         Test the number of storms identified by varying input data and thresholds.
         """
         storms = StormEvents.from_station(station_id, start, stop, source=source)
-        storms.find(instant_mass_to_start=mass, hours_to_stop=hours)
+        storms.find(instant_mass_to_start=mass, hours_to_stop=hours, min_storm_total=0.2)
         assert storms.N == n_storms
