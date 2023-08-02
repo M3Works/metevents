@@ -138,11 +138,12 @@ class StormEvents(BaseEvents):
         variable = pnt.ALLOWED_VARIABLES.PRECIPITATIONACCUM
 
         df = pnt.get_daily_data(start, stop, [variable])
-        df = df.reset_index().set_index('datetime')
 
         if df is None:
             raise ValueError(f'The combination of pulling precip from {station_id} '
                              f'during {start}-{stop} produced no data. Check station '
                              f'is real and has precip data between specified dates.')
+        else:
+            df = df.reset_index().set_index('datetime')
 
         return cls(df[variable.name].diff())
