@@ -17,8 +17,8 @@ def main():
     # Useful attributes. Number of events detected
     print(f"Number of storms: {storms.N}")
 
-    # Each event has properties are of interest, storm events are CumulativePeriods so there is a total attribute.
-    # ...Base period definitions live in metevents.periods
+    # Each event has properties are of interest, storm events are CumulativePeriods so
+    # ...there is a total attribute. Base period definitions live in metevents.periods
     for event in storms.events:
         print(f"\t{event.start} - {event.stop} ({event.duration}): {event.total}")
 
