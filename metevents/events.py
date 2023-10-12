@@ -1,9 +1,16 @@
-from .periods import CumulativePeriod
+import logging
+import numpy as np
 import pandas as pd
 from datetime import timedelta
 from metloom.pointdata import CDECPointData, SnotelPointData, MesowestPointData
 from pandas.tseries.frequencies import to_offset
-from .utilities import determine_freq
+
+# local imports
+from metevents.periods import CumulativePeriod, BaseTimePeriod
+from metevents.utilities import determine_freq
+
+
+LOG = logging.getLogger(__name__)
 
 
 class BaseEvents:
@@ -147,3 +154,64 @@ class StormEvents(BaseEvents):
             df = df.reset_index().set_index('datetime')
 
         return cls(df[variable.name].diff())
+
+
+class SpikeValleyEvent(BaseEvents):
+
+    def find(self, window=None, threshold=2.0):
+        """
+        Find instances of spikes or valleys within a timeseries
+
+        Args:
+            window: The window size for the moving average and moving standard deviation.
+            threshold: Multiplier for the moving standard deviation to determine spikes.
+
+        """
+        # calculate window as percent of total time if not given
+        if window is None:
+            # freq = self.data.index.inferred_freq
+            window = int(len(self.data) / 5.0)
+            if window == 0:
+                LOG.debug("Defaulting to window of 5")
+                window = 5
+        # group main condition by time
+        ind = self.detect_spikes_using_rolling_stats(
+            self.data, window, threshold
+        )
+        # Group the events
+        groups, _ = self.group_condition_by_time(ind)
+        group_list = sorted(list(groups.items()))
+
+        # Build the list of events
+        for i, (event_id, curr_group) in enumerate(group_list):
+            curr_start = curr_group.min()
+            curr_stop = curr_group.max()
+            event = BaseTimePeriod(self.data.loc[curr_start:curr_stop])
+            self._events.append(event)
+
+    @staticmethod
+    def detect_spikes_using_rolling_stats(
+        series, window_size, threshold
+    ):
+        """
+        Detect spikes in time series data using moving average and moving standard deviation.
+
+        Parameters:
+        - series: A pandas Series representing time series data.
+        - window_size: The window size for the moving average and moving standard deviation.
+        - threshold: Multiplier for the moving standard deviation to determine spikes.
+
+        Returns:
+        - A pandas Series of the same length as the input series, but with 1 for spikes and 0 otherwise.
+        """
+        rolling_mean = series.rolling(window=window_size).mean()
+        rolling_std = series.rolling(window=window_size).std()
+
+        upper_bound = rolling_mean + (rolling_std * threshold)
+        lower_bound = rolling_mean - (rolling_std * threshold)
+
+        spikes = np.where(
+            (series > upper_bound) | (series < lower_bound),
+            1, 0
+        )
+        return pd.Series(spikes, index=series.index)
