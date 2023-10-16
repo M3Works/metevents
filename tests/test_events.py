@@ -3,7 +3,7 @@ import pandas as pd
 import pytest
 from pandas import DatetimeIndex
 
-from metevents.events import StormEvents
+from metevents.events import StormEvents, SpikeValleyEvent
 
 
 @pytest.fixture()
@@ -87,3 +87,11 @@ class TestStormEvents:
         storms.find(instant_mass_to_start=mass, hours_to_stop=hours,
                     min_storm_total=0.2)
         assert storms.N == n_storms
+
+
+class TestSpikeValleyEvent:
+    @pytest.fixture()
+    def storms(self, series, data):
+        # TODO: write test and get data for this fixture
+        # Could use FLV data
+        yield SpikeValleyEvent()
