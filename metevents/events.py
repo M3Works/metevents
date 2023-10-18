@@ -215,3 +215,53 @@ class SpikeValleyEvent(BaseEvents):
             1, 0
         )
         return pd.Series(spikes, index=series.index)
+
+
+class DataGapEvent(BaseEvents):
+
+    def find(self, min_len=3, expected_frequency="1D"):
+        """
+        Find instances of data gaps
+
+        Args:
+            min_len: minimum length of a gap
+            expected_frequency: expected frequency of timeseries
+
+        """
+        # find all nan indices
+        ind = pd.isna(self.data)
+
+        # Ensure the dataframe is sorted by index
+        self.data = self.data.sort_index()
+
+        # Calculate differences between consecutive timestamps
+        differences = self.data.index.to_series().diff()
+
+        # Assume a daily frequency for this example
+        expected_difference = pd.Timedelta(expected_frequency)
+
+        # Group the nan data events
+        groups, _ = self.group_condition_by_time(ind)
+
+        # Identify gap start points
+        # gap_starts = self.data.index[differences > expected_difference]
+        gaps = differences[differences > expected_difference].dropna()
+        for idg, gap in zip(gaps.index, gaps):
+            # TODO: this logic makes missing 4 days into a 6 day gap
+            gap_iloc = ind.index.get_loc(idg)
+            # Create a group of the missing indices
+            groups[gap_iloc] = pd.DatetimeIndex(
+                [idg - gap, idg]
+            )
+
+        # sort the group list
+        group_list = sorted(list(groups.items()))
+
+        # Build the list of events
+        for event_id, curr_group in group_list:
+            curr_start = curr_group.min()
+            curr_stop = curr_group.max()
+            event = BaseTimePeriod(self.data.loc[curr_start:curr_stop])
+            # only keep events that are longer than what is configured
+            if event.duration >= min_len * expected_difference:
+                self._events.append(event)

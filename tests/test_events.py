@@ -1,9 +1,11 @@
 from datetime import datetime, timedelta
+
+import numpy as np
 import pandas as pd
 import pytest
 from pandas import DatetimeIndex
 
-from metevents.events import StormEvents, SpikeValleyEvent
+from metevents.events import StormEvents, SpikeValleyEvent, DataGapEvent
 
 
 @pytest.fixture()
@@ -91,7 +93,61 @@ class TestStormEvents:
 
 class TestSpikeValleyEvent:
     @pytest.fixture()
-    def storms(self, series, data):
+    def events(self, series, data):
         # TODO: write test and get data for this fixture
         # Could use FLV data
         yield SpikeValleyEvent()
+
+
+class TestDataGapEvent:
+
+    @pytest.fixture(scope="class")
+    def gap_series(self):
+        data = np.array(range(100)).astype("float32")
+        index = [datetime(2023, 1, 1) + timedelta(days=i) for i in
+                 range(len(data))]
+        # Set nans that we will drop
+        data[10:15] = np.nan
+        data[40:45] = np.nan
+        # gap not big enough to flag
+        data[50:51] = np.nan
+        series = pd.Series(data, index=DatetimeIndex(index, freq='D'))
+        # Drop na to create time gaps
+        series = series.dropna()
+        # create nan that should be flagged
+        series.iloc[60:65] = np.nan
+        return series
+
+    @pytest.fixture(scope="class")
+    def events(self, gap_series):
+        yield DataGapEvent(gap_series)
+
+    @pytest.fixture(scope="class")
+    def found_events(self, events):
+        events.find(min_len=3, expected_frequency="1D")
+        yield events
+
+    def test_number_of_events(self, found_events):
+        assert found_events.N == 3
+
+    @pytest.mark.parametrize(
+        "idx, start_date", [
+            (0, "2023-01-10"),
+            (1, "2023-02-09"),
+            (2, "2023-03-13"),
+        ]
+    )
+    def test_start_dates(self, found_events, idx, start_date):
+        event = found_events.events[idx]
+        assert event.start == pd.to_datetime(start_date)
+
+    @pytest.mark.parametrize(
+        "idx, duration", [
+            (0, "6 days"),
+            (1, "6 days"),
+            (2, "4 days"),
+        ]
+    )
+    def test_start_duration(self, found_events, idx, duration):
+        event = found_events.events[idx]
+        assert event.duration == pd.to_timedelta(duration)
