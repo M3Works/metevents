@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -94,11 +95,77 @@ class TestStormEvents:
 
 
 class TestSpikeValleyEvent:
-    @pytest.fixture()
-    def events(self, series, data):
-        # TODO: write test and get data for this fixture
-        # Could use FLV data
-        yield SpikeValleyEvent()
+    DATA_DIR = Path(__file__).parent.joinpath("data/mocks")
+
+    @pytest.fixture(scope="class")
+    def series(self):
+        df = pd.read_csv(
+            self.DATA_DIR.joinpath("flv.csv"), parse_dates=["datetime"],
+            index_col="datetime"
+        )
+        return df["SNOWDEPTH"]
+
+    @pytest.fixture(scope="class")
+    def events(self, series):
+        yield SpikeValleyEvent(series)
+
+    @pytest.fixture(scope="class")
+    def found_events(self, events):
+        events.find(window=int(len(events.data)/4), threshold=2.0)
+        yield events
+
+    def test_number_of_events(self, found_events):
+        assert found_events.N == 9
+
+    @pytest.mark.parametrize(
+        "idx, start_date", [
+            (0, '2022-12-02T08:00:00+00:00'),
+            (1, '2022-12-06T08:00:00+00:00'),
+            (2, '2022-12-11T08:00:00+00:00'),
+            (3, '2023-01-01T08:00:00+00:00'),
+            (4, '2023-01-17T08:00:00+00:00'),
+            (5, '2023-01-30T08:00:00+00:00'),
+            (6, '2023-02-14T08:00:00+00:00'),
+            (7, '2023-02-22T08:00:00+00:00'),
+            (8, '2023-03-05T08:00:00+00:00')
+        ]
+    )
+    def test_start_dates(self, found_events, idx, start_date):
+        event = found_events.events[idx]
+        assert event.start == pd.to_datetime(start_date)
+
+    @pytest.mark.parametrize(
+        "idx, stop_date", [
+            (0, '2022-12-02T08:00:00+00:00'),
+            (1, '2022-12-08T08:00:00+00:00'),
+            (2, '2022-12-12T08:00:00+00:00'),
+            (3, '2023-01-01T08:00:00+00:00'),
+            (4, '2023-01-17T08:00:00+00:00'),
+            (5, '2023-01-30T08:00:00+00:00'),
+            (6, '2023-02-15T08:00:00+00:00'),
+            (7, '2023-02-23T08:00:00+00:00'),
+            (8, '2023-03-05T08:00:00+00:00')
+        ]
+    )
+    def test_stop_dates(self, found_events, idx, stop_date):
+        event = found_events.events[idx]
+        assert event.stop == pd.to_datetime(stop_date)
+
+    @pytest.mark.parametrize(
+        "idx, duration", [
+            (0, '0 days 00:00:00'),
+            (1, '2 days 00:00:00'),
+            (2, '1 days 00:00:00'),
+            (3, '0 days 00:00:00'),
+            (4, '0 days 00:00:00'),
+            (5, '0 days 00:00:00'),
+            (6, '1 days 00:00:00'),
+            (7, '1 days 00:00:00'),
+            (8, '0 days 00:00:00')]
+    )
+    def test_start_duration(self, found_events, idx, duration):
+        event = found_events.events[idx]
+        assert event.duration == pd.to_timedelta(duration)
 
 
 class TestDataGapEvent:

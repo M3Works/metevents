@@ -170,7 +170,7 @@ class SpikeValleyEvent(BaseEvents):
         # calculate window as percent of total time if not given
         if window is None:
             # freq = self.data.index.inferred_freq
-            window = int(len(self.data) / 5.0)
+            window = int(len(self.data) / 4.0)
             if window == 0:
                 LOG.debug("Defaulting to window of 5")
                 window = 5
