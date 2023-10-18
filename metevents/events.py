@@ -265,3 +265,35 @@ class DataGapEvent(BaseEvents):
             # only keep events that are longer than what is configured
             if event.duration >= min_len * expected_difference:
                 self._events.append(event)
+
+
+class FlatLineEvent(BaseEvents):
+
+    def find(self, min_len=5, slope_thresh=0.0):
+        """
+        Find instances of flat-lined data
+
+        Args:
+            min_len: minimum length of a flat value
+            slope_thresh: slope threshold for flatline. Anything absolute
+                value of slope <=slope thresh will be flagged
+
+        """
+        # find the slope
+        diff = self.data.diff()
+        # find the absolute slope within our threshold
+        ind = np.abs(diff) <= slope_thresh
+
+        # Group the nan data events
+        groups, _ = self.group_condition_by_time(ind)
+        # sort the group list
+        group_list = sorted(list(groups.items()))
+
+        # Build the list of events
+        for event_id, curr_group in group_list:
+            curr_start = curr_group.min()
+            curr_stop = curr_group.max()
+            event = BaseTimePeriod(self.data.loc[curr_start:curr_stop])
+            # only keep events that are longer than what is configured
+            if len(event.data) >= min_len:
+                self._events.append(event)
