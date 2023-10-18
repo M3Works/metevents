@@ -106,7 +106,7 @@ class StormEvents(BaseEvents):
             # Has enough mass accumulated to be considered a storm
             enough_storm_mass = total >= min_storm_total
             base_condition = (
-                    enough_hours_wo_precip or storm_duration_too_long
+                enough_hours_wo_precip or storm_duration_too_long
             )
             condition = (base_condition and enough_storm_mass)
 
