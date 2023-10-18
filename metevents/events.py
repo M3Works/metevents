@@ -39,7 +39,8 @@ class BaseEvents:
     def group_condition_by_time(ind):
         ind_sum = ind.eq(False).cumsum()
 
-        # Isolate the ind_sum by positions that are True and group them together
+        # Isolate the ind_sum by positions that are
+        # True and group them together
         time_groups = ind_sum.loc[ind.eq(True)].groupby(ind_sum)
         groups = time_groups.groups
         return groups, ind_sum
@@ -51,8 +52,8 @@ class BaseEvents:
 
 class StormEvents(BaseEvents):
 
-    def find(self, instant_mass_to_start=0.1, min_storm_total=0.5, hours_to_stop=24,
-             max_storm_hours=336):
+    def find(self, instant_mass_to_start=0.1, min_storm_total=0.5,
+             hours_to_stop=24, max_storm_hours=336):
         """
         Find all the storms that are initiated by a mass greater than the
         instant_mass_to_start and receive less than that threshold for at
@@ -60,8 +61,8 @@ class StormEvents(BaseEvents):
         min_storm_total and max_storm_hours.
 
         Args:
-            instant_mass_to_start: mass per time step to consider the beginning of a
-                storm
+            instant_mass_to_start: mass per time step to consider the
+                beginning of a storm
             min_storm_total: Total storm mass to be considered a complete storm
             hours_to_stop: minimum hours of mass less than instant threshold to
                 end a storm
@@ -104,7 +105,9 @@ class StormEvents(BaseEvents):
             storm_duration_too_long = duration > max_storm
             # Has enough mass accumulated to be considered a storm
             enough_storm_mass = total >= min_storm_total
-            base_condition = (enough_hours_wo_precip or storm_duration_too_long)
+            base_condition = (
+                    enough_hours_wo_precip or storm_duration_too_long
+            )
             condition = (base_condition and enough_storm_mass)
 
             if condition or nx_idx == N_groups:
@@ -127,7 +130,8 @@ class StormEvents(BaseEvents):
             station_id: string id of the station of interest
             start: Datetime object when to start looking for data
             stop: Datetime object when to stop looking for data
-            source: Network/datasource to search for data options: NRCS, mesowest, CDEC
+            source: Network/datasource to search for data options:
+                NRCS, mesowest, CDEC
             station_name: String name of the station to pass to pointdata
         """
         pnt = None
@@ -138,8 +142,10 @@ class StormEvents(BaseEvents):
                 break
 
         if pnt is None:
-            raise ValueError(f'Datasource {source} is invalid. Use '
-                             f'{", ".join([c.DATASOURCE for c in pnt_classes])}')
+            raise ValueError(
+                f'Datasource {source} is invalid. Use '
+                f'{", ".join([c.DATASOURCE for c in pnt_classes])}'
+            )
 
         # Pull data
         variable = pnt.ALLOWED_VARIABLES.PRECIPITATIONACCUM
@@ -147,9 +153,11 @@ class StormEvents(BaseEvents):
         df = pnt.get_daily_data(start, stop, [variable])
 
         if df is None:
-            raise ValueError(f'The combination of pulling precip from {station_id} '
-                             f'during {start}-{stop} produced no data. Check station '
-                             f'is real and has precip data between specified dates.')
+            raise ValueError(
+                f'The combination of pulling precip from {station_id} '
+                f'during {start}-{stop} produced no data. Check station '
+                f'is real and has precip data between specified dates.'
+            )
         else:
             df = df.reset_index().set_index('datetime')
 
@@ -163,8 +171,10 @@ class SpikeValleyEvent(BaseEvents):
         Find instances of spikes or valleys within a timeseries
 
         Args:
-            window: The window size for the moving average and moving standard deviation.
-            threshold: Multiplier for the moving standard deviation to determine spikes.
+            window: The window size for the moving average and moving
+                standard deviation.
+            threshold: Multiplier for the moving standard deviation to
+                determine spikes.
 
         """
         # calculate window as percent of total time if not given
@@ -194,15 +204,19 @@ class SpikeValleyEvent(BaseEvents):
         series, window_size, threshold
     ):
         """
-        Detect spikes in time series data using moving average and moving standard deviation.
+        Detect spikes in time series data using moving average and moving
+        standard deviation.
 
         Parameters:
         - series: A pandas Series representing time series data.
-        - window_size: The window size for the moving average and moving standard deviation.
-        - threshold: Multiplier for the moving standard deviation to determine spikes.
+        - window_size: The window size for the moving average and moving
+            standard deviation.
+        - threshold: Multiplier for the moving standard deviation to determine
+            spikes.
 
         Returns:
-        - A pandas Series of the same length as the input series, but with 1 for spikes and 0 otherwise.
+        - A pandas Series of the same length as the input series, but with 1
+            for spikes and 0 otherwise.
         """
         rolling_mean = series.rolling(window=window_size).mean()
         rolling_std = series.rolling(window=window_size).std()

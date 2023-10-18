@@ -111,7 +111,7 @@ class TestSpikeValleyEvent:
 
     @pytest.fixture(scope="class")
     def found_events(self, events):
-        events.find(window=int(len(events.data)/4), threshold=2.0)
+        events.find(window=int(len(events.data) / 4), threshold=2.0)
         yield events
 
     def test_number_of_events(self, found_events):
