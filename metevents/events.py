@@ -311,3 +311,31 @@ class FlatLineEvent(BaseEvents):
             # only keep events that are longer than what is configured
             if len(event.data) >= min_len:
                 self._events.append(event)
+
+
+class ExtremeValueEvent(BaseEvents):
+
+    def find(self, expected_max=600.0, expected_min=0.0):
+        """
+        Find events where the values are outside of the expected range
+
+        Args:
+            expected_max: Maximum expected value in the data
+            expected_min: minimum expected value in the data
+
+        """
+        # Indices where data is outside of expected range
+        ind = (self.data > expected_max) | (self.data < expected_min)
+
+        # Group the nan data events
+        groups, _ = self.group_condition_by_time(ind)
+        # sort the group list
+        group_list = sorted(list(groups.items()))
+
+        # Build the list of events
+        for event_id, curr_group in group_list:
+            curr_start = curr_group.min()
+            curr_stop = curr_group.max()
+            event = BaseTimePeriod(self.data.loc[curr_start:curr_stop])
+            # store the events
+            self._events.append(event)

@@ -7,7 +7,8 @@ import pytest
 from pandas import DatetimeIndex
 
 from metevents.events import (
-    StormEvents, SpikeValleyEvent, DataGapEvent, FlatLineEvent
+    StormEvents, SpikeValleyEvent, DataGapEvent, FlatLineEvent,
+    ExtremeValueEvent
 )
 
 
@@ -229,7 +230,7 @@ class TestFlatlineEvent:
         data = np.array(range(100)).astype("float32")
         index = [datetime(2023, 1, 1) + timedelta(days=i) for i in
                  range(len(data))]
-        # Set nans that we will drop
+        # Set flatlines
         data[10:18] = 10.0
         data[40:48] = 40.0
         # not long enough to flag
@@ -273,6 +274,66 @@ class TestFlatlineEvent:
         "idx, duration", [
             (0, "6 days"),
             (1, "6 days"),
+        ]
+    )
+    def test_start_duration(self, found_events, idx, duration):
+        event = found_events.events[idx]
+        assert event.duration == pd.to_timedelta(duration)
+
+
+class TestExtremeValueEvent:
+
+    @pytest.fixture(scope="class")
+    def series(self):
+        data = np.array(range(100)).astype("float32")
+        index = [datetime(2023, 1, 1) + timedelta(days=i) for i in
+                 range(len(data))]
+        # Set extreme values
+        data[10:15] = 700.0
+        data[40:48] = -1.0
+        data[50:54] = 601.0
+        series = pd.Series(data, index=DatetimeIndex(index, freq='D'))
+        return series
+
+    @pytest.fixture(scope="class")
+    def events(self, series):
+        yield ExtremeValueEvent(series)
+
+    @pytest.fixture(scope="class")
+    def found_events(self, events):
+        events.find(expected_max=600.0, expected_min=0.0)
+        yield events
+
+    def test_number_of_events(self, found_events):
+        assert found_events.N == 3
+
+    @pytest.mark.parametrize(
+        "idx, start_date", [
+            (0, "2023-01-11"),
+            (1, "2023-02-10"),
+            (2, "2023-02-20"),
+        ]
+    )
+    def test_start_dates(self, found_events, idx, start_date):
+        event = found_events.events[idx]
+        assert event.start == pd.to_datetime(start_date)
+
+    @pytest.mark.parametrize(
+        "idx, stop_date", [
+            (0, "2023-01-15"),
+            (1, "2023-02-17"),
+            (2, "2023-02-23"),
+        ]
+    )
+    def test_stop_dates(self, found_events, idx, stop_date):
+        event = found_events.events[idx]
+        assert event.stop == pd.to_datetime(stop_date)
+
+    @pytest.mark.parametrize(
+        "idx, duration", [
+            (0, "4 days"),
+            (1, "7 days"),
+            (2, "3 days"),
         ]
     )
     def test_start_duration(self, found_events, idx, duration):
