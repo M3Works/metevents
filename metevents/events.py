@@ -4,6 +4,7 @@ import pandas as pd
 from datetime import timedelta
 from metloom.pointdata import CDECPointData, SnotelPointData, MesowestPointData
 from pandas.tseries.frequencies import to_offset
+from scipy.signal import find_peaks
 
 # local imports
 from metevents.periods import CumulativePeriod, BaseTimePeriod
@@ -166,27 +167,21 @@ class StormEvents(BaseEvents):
 
 class SpikeValleyEvent(BaseEvents):
 
-    def find(self, window=None, threshold=2.0):
+    def find(self, height=None, threshold=None, prominence=100.0,
+            width=None):
         """
         Find instances of spikes or valleys within a timeseries
 
         Args:
-            window: The window size for the moving average and moving
-                standard deviation.
-            threshold: Multiplier for the moving standard deviation to
-                determine spikes.
+            height: Required height of peaks
+            threshold: Required relative height to neighboring peaks
+            prominence: Required prominence of peaks
+            width: required width. Default is a min of 0 and max of 3 (0,3)
 
         """
-        # calculate window as percent of total time if not given
-        if window is None:
-            # freq = self.data.index.inferred_freq
-            window = int(len(self.data) / 4.0)
-            if window == 0:
-                LOG.debug("Defaulting to window of 5")
-                window = 5
-        # group main condition by time
-        ind = self.detect_spikes_using_rolling_stats(
-            self.data, window, threshold
+        ind = self.detect_spikes_using_find_peaks(
+            self.data, height=height, threshold=threshold,
+            prominence=prominence, width=width
         )
         # Group the events
         groups, _ = self.group_condition_by_time(ind)
@@ -200,35 +195,36 @@ class SpikeValleyEvent(BaseEvents):
             self._events.append(event)
 
     @staticmethod
-    def detect_spikes_using_rolling_stats(
-        series, window_size, threshold
+    def detect_spikes_using_find_peaks(
+            series, height=None, threshold=None, prominence=100.0,
+            width=None
     ):
         """
-        Detect spikes in time series data using moving average and moving
-        standard deviation.
+        Detect spikes in time series data using the scipy find_peaks function
 
-        Parameters:
-        - series: A pandas Series representing time series data.
-        - window_size: The window size for the moving average and moving
-            standard deviation.
-        - threshold: Multiplier for the moving standard deviation to determine
-            spikes.
+        Args:
+            series: A pandas Series representing time series data.
+            height: Required height of peaks
+            threshold: Required relative height to neighboring peaks
+            prominence: Required prominence of peaks
+            width: required width. Default is a min of 0 and max of 3 (0,3)
 
         Returns:
-        - A pandas Series of the same length as the input series, but with 1
-            for spikes and 0 otherwise.
+
         """
-        rolling_mean = series.rolling(window=window_size).mean()
-        rolling_std = series.rolling(window=window_size).std()
-
-        upper_bound = rolling_mean + (rolling_std * threshold)
-        lower_bound = rolling_mean - (rolling_std * threshold)
-
-        spikes = np.where(
-            (series > upper_bound) | (series < lower_bound),
-            1, 0
+        width = width or (0, 3)
+        peaks, peak_info = find_peaks(
+            series, height=height, threshold=threshold, prominence=prominence,
+            width=width
         )
-        return pd.Series(spikes, index=series.index)
+        # get the index span
+        width_values = peak_info["widths"]
+        peak_index = pd.Series(index=series.index, data=[False] * len(series))
+        for p, w in zip(peaks, width_values):
+            p1 = int(p - w)
+            p2 = int(p + w) + 1
+            peak_index.iloc[p1:p2] = True
+        return peak_index
 
 
 class DataGapEvent(BaseEvents):
@@ -339,3 +335,39 @@ class ExtremeValueEvent(BaseEvents):
             event = BaseTimePeriod(self.data.loc[curr_start:curr_stop])
             # store the events
             self._events.append(event)
+
+
+class ExtremeChangeEvent(BaseEvents):
+    """
+    Find where the slope of the data is larger than expected over a certain
+    period of time
+    """
+
+    def find(self, min_len=5, slope_thresh=3.0):
+        """
+        Find instances of excessive rate of change
+
+        Args:
+            min_len: minimum length of the event
+            slope_thresh: slope threshold for flatline. Anything absolute
+                value of slope >=slope thresh will be flagged
+
+        """
+        # find the slope
+        diff = self.data.diff()
+        # find the absolute slope outside our threshold
+        ind = np.abs(diff) >= slope_thresh
+
+        # Group the nan data events
+        groups, _ = self.group_condition_by_time(ind)
+        # sort the group list
+        group_list = sorted(list(groups.items()))
+
+        # Build the list of events
+        for event_id, curr_group in group_list:
+            curr_start = curr_group.min()
+            curr_stop = curr_group.max()
+            event = BaseTimePeriod(self.data.loc[curr_start:curr_stop])
+            # only keep events that are longer than what is configured
+            if len(event.data) >= min_len:
+                self._events.append(event)

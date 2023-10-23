@@ -339,3 +339,8 @@ class TestExtremeValueEvent:
     def test_start_duration(self, found_events, idx, duration):
         event = found_events.events[idx]
         assert event.duration == pd.to_timedelta(duration)
+
+
+class TestExtremeChangeEvent:
+    # TODO: this
+    pass
