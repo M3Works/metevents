@@ -201,6 +201,8 @@ class SpikeValleyEvent(BaseEvents):
     ):
         """
         Detect spikes in time series data using the scipy find_peaks function
+        https://docs.scipy.org/doc/scipy/reference/generated/
+        scipy.signal.find_peaks.html
 
         Args:
             series: A pandas Series representing time series data.
