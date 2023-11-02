@@ -215,18 +215,35 @@ class SpikeValleyEvent(BaseEvents):
 
         """
         width = width or (0, 3)
+
+        # find peaks
         peaks, peak_info = find_peaks(
             series, height=height, threshold=threshold, prominence=prominence,
             width=width
         )
         # get the index span
-        width_values = peak_info["widths"]
-        peak_index = pd.Series(index=series.index, data=[False] * len(series))
-        for p, w in zip(peaks, width_values):
+        peak_width_values = peak_info["widths"]
+
+        # find valleys
+        valleys, valley_info = find_peaks(
+            # Data gets flipped around y axis
+            series * -1.0,
+            height=height, threshold=threshold, prominence=prominence,
+            width=width
+        )
+        valley_width_values = valley_info["widths"]
+
+        spike_index = pd.Series(index=series.index, data=[False] * len(series))
+        # Set true for the width of the peak surrounding the center
+        for p, w in zip(peaks, peak_width_values):
             p1 = int(p - w)
             p2 = int(p + w) + 1
-            peak_index.iloc[p1:p2] = True
-        return peak_index
+            spike_index.iloc[p1:p2] = True
+        for p, w in zip(valleys, valley_width_values):
+            p1 = int(p - w)
+            p2 = int(p + w) + 1
+            spike_index.iloc[p1:p2] = True
+        return spike_index
 
 
 class DataGapEvent(BaseEvents):
