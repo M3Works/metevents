@@ -8,7 +8,7 @@ from pandas import DatetimeIndex
 
 from metevents.events import (
     StormEvents, SpikeValleyEvent, DataGapEvent, FlatLineEvent,
-    ExtremeValueEvent
+    ExtremeValueEvent, ExtremeChangeEvent
 )
 
 
@@ -342,5 +342,56 @@ class TestExtremeValueEvent:
 
 
 class TestExtremeChangeEvent:
-    # TODO: this
-    pass
+    @pytest.fixture(scope="class")
+    def series(self):
+        data = np.array(range(100)).astype("float32")
+        index = [datetime(2023, 1, 1) + timedelta(days=i) for i in
+                 range(len(data))]
+        # Set extreme values
+        data[10:15] = 700.0
+        series = pd.Series(data, index=DatetimeIndex(index, freq='D'))
+        return series
+
+    @pytest.fixture(scope="class")
+    def events(self, series):
+        yield ExtremeChangeEvent(series)
+
+    @pytest.fixture(scope="class")
+    def found_events(self, events):
+        events.find(
+            min_len=1, positive_slope_thresh=100,
+            negative_slope_thresh=-100.0)
+        yield events
+
+    def test_number_of_events(self, found_events):
+        assert found_events.N == 2
+
+    @pytest.mark.parametrize(
+        "idx, start_date", [
+            (0, "2023-01-11"),
+            (1, "2023-01-16"),
+        ]
+    )
+    def test_start_dates(self, found_events, idx, start_date):
+        event = found_events.events[idx]
+        assert event.start == pd.to_datetime(start_date)
+
+    @pytest.mark.parametrize(
+        "idx, stop_date", [
+            (0, "2023-01-11"),
+            (1, "2023-01-16"),
+        ]
+    )
+    def test_stop_dates(self, found_events, idx, stop_date):
+        event = found_events.events[idx]
+        assert event.stop == pd.to_datetime(stop_date)
+
+    @pytest.mark.parametrize(
+        "idx, duration", [
+            (0, "0 days"),
+            (1, "0 days"),
+        ]
+    )
+    def test_start_duration(self, found_events, idx, duration):
+        event = found_events.events[idx]
+        assert event.duration == pd.to_timedelta(duration)

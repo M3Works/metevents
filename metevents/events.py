@@ -345,20 +345,37 @@ class ExtremeChangeEvent(BaseEvents):
     period of time
     """
 
-    def find(self, min_len=5, slope_thresh=3.0):
+    def find(
+            self, min_len=1, positive_slope_thresh=None,
+            negative_slope_thresh=-3.0
+    ):
         """
         Find instances of excessive rate of change
 
         Args:
             min_len: minimum length of the event
-            slope_thresh: slope threshold for flatline. Anything absolute
+            positive_slope_thresh: Anything absolute
+                value of slope >=slope thresh will be flagged
+            negative_slope_thresh: slope threshold for flatline. Anything absolute
                 value of slope >=slope thresh will be flagged
 
         """
+
+        if positive_slope_thresh is None and negative_slope_thresh is None:
+            raise ValueError("One slope threshold must be provided")
+
         # find the slope
         diff = self.data.diff()
-        # find the absolute slope outside our threshold
-        ind = np.abs(diff) >= slope_thresh
+
+        ind_pos = pd.Series([False] * len(diff), index=diff.index)
+        ind_neg = pd.Series([False] * len(diff), index=diff.index)
+        if positive_slope_thresh is not None:
+            ind_pos = diff >= positive_slope_thresh
+        if negative_slope_thresh is not None:
+            ind_neg = diff <= negative_slope_thresh
+
+        # join the index
+        ind = ind_pos | ind_neg
 
         # Group the nan data events
         groups, _ = self.group_condition_by_time(ind)
