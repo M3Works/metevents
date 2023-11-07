@@ -96,7 +96,8 @@ class TestOutlierEvents:
         yield OutlierEvents(series)
 
     @pytest.mark.parametrize('data, outliers', [
-        ([2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 23, 4, 42, 2, 2, -40], [42, -40])
+        ([2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+          2, 2, 3, 3, 3, 3, 23, 4, 42, 2, 2, -40], [42, -40])
     ])
     def test_outliers(self, outlier_storms, data, outliers):
         outlier_storms.find()
@@ -107,7 +108,9 @@ class TestOutlierEvents:
          [3.34, 2.55, 2.43, 1.54, 1.14])
     ])
     def test_outliers_from_station(self, station_id, start, stop, source, outliers):
-        outlier_storms = OutlierEvents.from_station(station_id=station_id, start=start, stop=stop, source=source)
+        outlier_storms = OutlierEvents.from_station(station_id=station_id,
+                                                    start=start, stop=stop, source=source)
         outlier_storms.find()
         tolerance = 1e-10
-        assert outlier_storms.outliers.values.tolist() == pytest.approx(outliers, rel=tolerance, abs=tolerance)
+        assert (outlier_storms.outliers.values.tolist() ==
+                pytest.approx(outliers, rel=tolerance, abs=tolerance))
