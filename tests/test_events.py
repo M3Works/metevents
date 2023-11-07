@@ -115,5 +115,7 @@ class TestOutlierEvents:
 
         outlier_storms.find()
         tolerance = 1e-10
-        assert (outlier_storms.outliers.values.tolist() ==
-                pytest.approx(outliers, rel=tolerance, abs=tolerance))
+        assert (
+                outlier_storms.outliers.values.tolist()
+                == pytest.approx(outliers, rel=tolerance, abs=tolerance)
+        )
