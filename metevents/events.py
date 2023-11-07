@@ -7,7 +7,6 @@ from .utilities import determine_freq
 import numpy as np
 
 
-
 class BaseEvents:
     def __init__(self, data):
         self._events = []
@@ -68,7 +67,7 @@ class BaseEvents:
 
         if pnt is None:
             raise ValueError(f'Datasource {source} is invalid. Use '
-                            f'{", ".join([c.DATASOURCE for c in pnt_classes])}')
+                             f'{", ".join([c.DATASOURCE for c in pnt_classes])}')
 
         # Pull data
         variable = pnt.ALLOWED_VARIABLES.PRECIPITATIONACCUM

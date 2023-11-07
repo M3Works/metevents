@@ -108,8 +108,11 @@ class TestOutlierEvents:
          [3.34, 2.55, 2.43, 1.54, 1.14])
     ])
     def test_outliers_from_station(self, station_id, start, stop, source, outliers):
-        outlier_storms = OutlierEvents.from_station(station_id=station_id,
-                                                    start=start, stop=stop, source=source)
+        outlier_storms = OutlierEvents.from_station(
+            station_id=station_id,
+            start=start, stop=stop, source=source
+        )
+
         outlier_storms.find()
         tolerance = 1e-10
         assert (outlier_storms.outliers.values.tolist() ==
