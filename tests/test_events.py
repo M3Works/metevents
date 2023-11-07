@@ -4,6 +4,7 @@ import pytest
 from pandas import DatetimeIndex
 
 from metevents.events import StormEvents
+from metevents.events import OutlierEvents
 
 
 @pytest.fixture()
@@ -87,3 +88,26 @@ class TestStormEvents:
         storms.find(instant_mass_to_start=mass, hours_to_stop=hours,
                     min_storm_total=0.2)
         assert storms.N == n_storms
+
+
+class TestOutlierEvents:
+    @pytest.fixture()
+    def outlier_storms(self, series, data):
+        yield OutlierEvents(series)
+
+    @pytest.mark.parametrize('data, outliers', [
+        ([2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 23, 4, 42, 2, 2, -40], [42, -40])
+    ])
+    def test_outliers(self, outlier_storms, data, outliers):
+        outlier_storms.find()
+        assert outlier_storms.outliers.values.tolist() == outliers
+
+    @pytest.mark.parametrize('station_id, start, stop, source, outliers', [
+        ('TUM', datetime(2021, 10, 1), datetime(2022, 9, 30), 'CDEC',
+         [3.34, 2.55, 2.43, 1.54, 1.14])
+    ])
+    def test_outliers_from_station(self, station_id, start, stop, source, outliers):
+        outlier_storms = OutlierEvents.from_station(station_id=station_id, start=start, stop=stop, source=source)
+        outlier_storms.find()
+        tolerance = 1e-10
+        assert outlier_storms.outliers.values.tolist() == pytest.approx(outliers, rel=tolerance, abs=tolerance)

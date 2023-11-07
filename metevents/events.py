@@ -4,6 +4,8 @@ from datetime import timedelta
 from metloom.pointdata import CDECPointData, SnotelPointData, MesowestPointData
 from pandas.tseries.frequencies import to_offset
 from .utilities import determine_freq
+import numpy as np
+
 
 
 class BaseEvents:
@@ -12,6 +14,11 @@ class BaseEvents:
         self.data = data
         self._groups = []
         self._group_ids = None
+        self._outliers = None
+
+    @property
+    def outliers(self):
+        return self._outliers
 
     @property
     def events(self):
@@ -38,12 +45,47 @@ class BaseEvents:
         return groups, ind_sum
 
     @classmethod
-    def from_station(cls, station_id, start, end):
-        raise NotImplementedError('Not implemented')
+    def from_station(cls, station_id, start, stop, station_name='unknown',
+                     source='NRCS'):
+
+        """
+
+        Form storm analysis from metloom
+
+        Args:
+            station_id: string id of the station of interest
+            start: Datetime object when to start looking for data
+            stop: Datetime object when to stop looking for data
+            source: Network/datasource to search for data options: NRCS, mesowest, CDEC
+            station_name: String name of the station to pass to pointdata
+        """
+        pnt = None
+        pnt_classes = [SnotelPointData, CDECPointData, MesowestPointData]
+        for STATION_CLASS in pnt_classes:
+            if STATION_CLASS.DATASOURCE.lower() == source.lower():
+                pnt = STATION_CLASS(station_id, station_name)
+                break
+
+        if pnt is None:
+            raise ValueError(f'Datasource {source} is invalid. Use '
+                            f'{", ".join([c.DATASOURCE for c in pnt_classes])}')
+
+        # Pull data
+        variable = pnt.ALLOWED_VARIABLES.PRECIPITATIONACCUM
+
+        df = pnt.get_daily_data(start, stop, [variable])
+
+        if df is None:
+            raise ValueError(f'The combination of pulling precip from {station_id} '
+                             f'during {start}-{stop} produced no data. Check station '
+                             f'is real and has precip data between specified dates.')
+        else:
+            df = df.reset_index().set_index('datetime')
+
+        return cls(df[variable.name].diff())
 
 
 class StormEvents(BaseEvents):
-
     def find(self, instant_mass_to_start=0.1, min_storm_total=0.5, hours_to_stop=24,
              max_storm_hours=336):
         """
@@ -109,41 +151,22 @@ class StormEvents(BaseEvents):
                 # Update start for the next storm
                 start = next_start
 
-    @classmethod
-    def from_station(cls, station_id, start, stop, station_name='unknown',
-                     source='NRCS'):
+
+class OutlierEvents(BaseEvents):
+    def find(self):
         """
+                Find periods that were outliers for the given dataset using a Z-score ??
+                Periods or records
+                """
+        # read data
+        data = self.data
+        if len(data) > 15:
+            mean = np.nanmean(data.values)
+            sd = np.nanstd(data.values)
+            z_score = (data.values - mean) / sd
+            # the record is outlier when z-score is lower -3 or higher than 3
+            is_outlier = (z_score > 3) | (z_score < -3)
 
-        Form storm analysis from metloom
-
-        Args:
-            station_id: string id of the station of interest
-            start: Datetime object when to start looking for data
-            stop: Datetime object when to stop looking for data
-            source: Network/datasource to search for data options: NRCS, mesowest, CDEC
-            station_name: String name of the station to pass to pointdata
-        """
-        pnt = None
-        pnt_classes = [SnotelPointData, CDECPointData, MesowestPointData]
-        for STATION_CLASS in pnt_classes:
-            if STATION_CLASS.DATASOURCE.lower() == source.lower():
-                pnt = STATION_CLASS(station_id, station_name)
-                break
-
-        if pnt is None:
-            raise ValueError(f'Datasource {source} is invalid. Use '
-                             f'{", ".join([c.DATASOURCE for c in pnt_classes])}')
-
-        # Pull data
-        variable = pnt.ALLOWED_VARIABLES.PRECIPITATIONACCUM
-
-        df = pnt.get_daily_data(start, stop, [variable])
-
-        if df is None:
-            raise ValueError(f'The combination of pulling precip from {station_id} '
-                             f'during {start}-{stop} produced no data. Check station '
-                             f'is real and has precip data between specified dates.')
-        else:
-            df = df.reset_index().set_index('datetime')
-
-        return cls(df[variable.name].diff())
+            # only save outliers
+            data_outlier = data[is_outlier]
+            self._outliers = data_outlier
