@@ -9,8 +9,8 @@ from metevents.events import OutlierEvents
 
 @pytest.fixture()
 def series(data):
-    index = [datetime(2023, 1, 1) + timedelta(days = i) for i in range(len(data))]
-    return pd.Series(data, index = DatetimeIndex(index, freq = 'D'))
+    index = [datetime(2023, 1, 1) + timedelta(days=i) for i in range(len(data))]
+    return pd.Series(data, index=DatetimeIndex(index, freq='D'))
 
 
 class TestStormEvents:
@@ -35,10 +35,10 @@ class TestStormEvents:
         Test the number of storms identified by varying input data
         and thresholds.
         """
-        storms.find(instant_mass_to_start = start_mass,
-                    hours_to_stop = stop_hours,
-                    min_storm_total = total_mass,
-                    max_storm_hours = max_hours)
+        storms.find(instant_mass_to_start=start_mass,
+                    hours_to_stop=stop_hours,
+                    min_storm_total=total_mass,
+                    max_storm_hours=max_hours)
         assert storms.N == n_storms
 
     @pytest.mark.parametrize('data, mass, hours, totals', [
@@ -53,7 +53,7 @@ class TestStormEvents:
         Test the number of storms identified by varying input data
         and thresholds.
         """
-        storms.find(instant_mass_to_start = mass, hours_to_stop = hours)
+        storms.find(instant_mass_to_start=mass, hours_to_stop=hours)
         assert [event.total for event in storms.events] == totals
 
     @pytest.mark.parametrize('data, mass, hours, durations', [
@@ -69,9 +69,9 @@ class TestStormEvents:
         Test the number of storms identified by varying input data
         and thresholds.
         """
-        storms.find(instant_mass_to_start = mass, hours_to_stop = hours)
+        storms.find(instant_mass_to_start=mass, hours_to_stop=hours)
         assert [event.duration for event in storms.events] == \
-               [timedelta(days = t) for t in durations]
+               [timedelta(days=t) for t in durations]
 
     @pytest.mark.parametrize('station_id, start, stop, source, mass, hours, n_storms', [
         ('TUM', datetime(2021, 12, 1), datetime(2022, 1, 15), 'CDEC', 0.1, 48, 5),
@@ -84,9 +84,9 @@ class TestStormEvents:
         """
         Test the number of storms identified by varying input data and thresholds.
         """
-        storms = StormEvents.from_station(station_id, start, stop, source = source)
-        storms.find(instant_mass_to_start = mass, hours_to_stop = hours,
-                    min_storm_total = 0.2)
+        storms = StormEvents.from_station(station_id, start, stop, source=source)
+        storms.find(instant_mass_to_start=mass, hours_to_stop=hours,
+                    min_storm_total=0.2)
         assert storms.N == n_storms
 
 
@@ -109,11 +109,13 @@ class TestOutlierEvents:
     ])
     def test_outliers_from_station(self, station_id, start, stop, source, outliers):
         outlier_storms = OutlierEvents.from_station(
-            station_id = station_id,
-            start = start, stop = stop, source = source
+            station_id=station_id,
+            start=start, stop=stop, source=source
         )
 
         outlier_storms.find()
         tolerance = 1e-10
         assert (outlier_storms.outliers.values.tolist() == \
                 pytest.approx(outliers, rel=tolerance, abs=tolerance))
+
+
