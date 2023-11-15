@@ -8,11 +8,10 @@ from metevents.events import OutlierEvents
 import numpy as np
 
 
-
 @pytest.fixture()
 def series(data):
-    index = [datetime(2023, 1, 1) + timedelta(days = i) for i in range(len(data))]
-    return pd.Series(data, index = DatetimeIndex(index, freq = 'D'))
+    index = [datetime(2023, 1, 1) + timedelta(days=i) for i in range(len(data))]
+    return pd.Series(data, index=DatetimeIndex(index, freq='D'))
 
 
 class TestStormEvents:
@@ -37,10 +36,10 @@ class TestStormEvents:
         Test the number of storms identified by varying input data
         and thresholds.
         """
-        storms.find(instant_mass_to_start = start_mass,
-                    hours_to_stop = stop_hours,
-                    min_storm_total = total_mass,
-                    max_storm_hours = max_hours)
+        storms.find(instant_mass_to_start=start_mass,
+                    hours_to_stop=stop_hours,
+                    min_storm_total=total_mass,
+                    max_storm_hours=max_hours)
         assert storms.N == n_storms
 
     @pytest.mark.parametrize('data, mass, hours, totals', [
@@ -55,7 +54,7 @@ class TestStormEvents:
         Test the number of storms identified by varying input data
         and thresholds.
         """
-        storms.find(instant_mass_to_start = mass, hours_to_stop = hours)
+        storms.find(instant_mass_to_start=mass, hours_to_stop=hours)
         assert [event.total for event in storms.events] == totals
 
     @pytest.mark.parametrize('data, mass, hours, durations', [
@@ -71,9 +70,9 @@ class TestStormEvents:
         Test the number of storms identified by varying input data
         and thresholds.
         """
-        storms.find(instant_mass_to_start = mass, hours_to_stop = hours)
+        storms.find(instant_mass_to_start=mass, hours_to_stop=hours)
         assert [event.duration for event in storms.events] == \
-               [timedelta(days = t) for t in durations]
+               [timedelta(days=t) for t in durations]
 
     @pytest.mark.parametrize('station_id, start, stop, source, mass, hours, n_storms', [
         ('TUM', datetime(2021, 12, 1), datetime(2022, 1, 15), 'CDEC', 0.1, 48, 5),
@@ -86,9 +85,9 @@ class TestStormEvents:
         """
         Test the number of storms identified by varying input data and thresholds.
         """
-        storms = StormEvents.from_station(station_id, start, stop, source = source)
-        storms.find(instant_mass_to_start = mass, hours_to_stop = hours,
-                    min_storm_total = 0.2)
+        storms = StormEvents.from_station(station_id, start, stop, source=source)
+        storms.find(instant_mass_to_start=mass, hours_to_stop=hours,
+                    min_storm_total=0.2)
         assert storms.N == n_storms
 
 
@@ -109,42 +108,66 @@ class TestOutlierEvents:
     @pytest.mark.parametrize('data, outliers_date', [
         ([2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
           2, 2, 3, 3, 3, 3, 23, 4, 42, 2, 2, -40],
-         [datetime(2023,1,26), datetime(2023,1,29)])
+         [datetime(2023, 1, 26), datetime(2023, 1, 29)])
     ])
     def test_outliers_date(self, outlier_storms, data, outliers_date):
         outlier_storms.find()
         results = outlier_storms.outliers.date
         assert np.all(results == outliers_date)
 
-    @pytest.mark.parametrize('station_id, start, stop, source, outliers_value', [
+    @pytest.mark.parametrize('data', [
+        ([2, 2, 2, 2])
+    ])
+    def test_length(self, outlier_storms, data):
+        with pytest.raises(ValueError,
+                           match='Data length must be greater than 15 '
+                                 'for outlier calculation.'):
+            outlier_storms.find()
+
+    @pytest.mark.parametrize('station_id, start, stop, source, out_value', [
         ('TUM', datetime(2021, 10, 1), datetime(2022, 9, 30), 'CDEC',
          [3.34, 2.55, 2.43, 1.54, 1.14])
     ])
-    def test_outliers_from_station(self, station_id, start, stop, source, outliers_value):
+    def test_station_outlier_value(self, station_id, start, stop, source, out_value):
         outlier_storms = OutlierEvents.from_station(
-            station_id = station_id,
-            start = start, stop = stop, source = source
+            station_id=station_id,
+            start=start, stop=stop, source=source
         )
 
         outlier_storms.find()
         tolerance = 1e-10
         results = outlier_storms.outliers.value
-        expectvalue = pytest.approx(outliers_value, rel=tolerance, abs=tolerance)
-        assert np.all(results == expectvalue)
+        expect_value = pytest.approx(out_value, rel=tolerance, abs=tolerance)
+        assert np.all(results == expect_value)
 
-    @pytest.mark.parametrize('station_id, start, stop, source, outliers_date', [
+    @pytest.mark.parametrize('station_id, start, stop, source, out_date', [
         ('TUM', datetime(2021, 10, 1), datetime(2022, 9, 30), 'CDEC',
-         [datetime(2021, 10, 24),datetime(2021, 10, 25),
-          datetime(2021, 12, 13),datetime(2021, 12, 14),
-          datetime(2021, 12, 23)])
+         DatetimeIndex(['2021-10-24 08:00:00+00:00', '2021-10-25 08:00:00+00:00',
+                        '2021-12-13 08:00:00+00:00', '2021-12-14 08:00:00+00:00',
+                        '2021-12-23 08:00:00+00:00'],
+                       dtype='datetime64[ns, UTC]',
+                       name='datetime',
+                       freq=None))
     ])
-    def test_outliers_from_station(self, station_id, start, stop, source, outliers_date):
+    def test_station_outlier_date(self, station_id, start, stop, source, out_date):
         outlier_storms = OutlierEvents.from_station(
-            station_id = station_id,
-            start = start, stop = stop, source = source
+            station_id=station_id,
+            start=start, stop=stop, source=source
         )
 
         outlier_storms.find()
         results = outlier_storms.outliers.date
-        datetime_index = pd.DatetimeIndex(results)
-        assert np.all(results == datetime_index)
+        assert np.all(results == out_date)
+
+    @pytest.mark.parametrize('station_id, start, stop, source', [
+        ('TUM', datetime(2021, 10, 1), datetime(2021, 10, 12), 'CDEC')
+    ])
+    def test_length_station(self, station_id, start, stop, source):
+        outlier_storms = OutlierEvents.from_station(
+            station_id=station_id,
+            start=start, stop=stop, source=source
+        )
+        with pytest.raises(ValueError,
+                           match='Data length must be greater than 15 '
+                                 'for outlier calculation.'):
+            outlier_storms.find()

@@ -15,7 +15,6 @@ class BaseEvents:
         self._groups = []
         self._group_ids = None
 
-
     @property
     def events(self):
         return self._events
@@ -154,9 +153,6 @@ class OutlierEvents(BaseEvents):
 
         self.outliers = None
 
-        if len(data) < 15:
-            raise ValueError('Length of data should exceed 15 for outlier calculation.')
-
     def find(self):
         """
                 Find periods that were outliers for the given dataset using a Z-score ??
@@ -164,6 +160,10 @@ class OutlierEvents(BaseEvents):
                 """
         # read data
         data = self.data
+        if len(data) < 15:
+            raise ValueError('Data length must be greater '
+                             'than 15 for outlier calculation.')
+
         mean = np.nanmean(data.values)
         sd = np.nanstd(data.values)
         z_score = (data.values - mean) / sd
