@@ -5,6 +5,7 @@ from metloom.pointdata import CDECPointData, SnotelPointData, MesowestPointData
 from pandas.tseries.frequencies import to_offset
 from .utilities import determine_freq
 import numpy as np
+from .periods import BaseEpoch
 
 
 class BaseEvents:
@@ -13,11 +14,7 @@ class BaseEvents:
         self.data = data
         self._groups = []
         self._group_ids = None
-        self._outliers = None
 
-    @property
-    def outliers(self):
-        return self._outliers
 
     @property
     def events(self):
@@ -152,6 +149,14 @@ class StormEvents(BaseEvents):
 
 
 class OutlierEvents(BaseEvents):
+    def __init__(self, data):
+        super().__init__(data)
+
+        self.outliers = None
+
+        if len(data) < 15:
+            raise ValueError('Length of data should exceed 15 for outlier calculation.')
+
     def find(self):
         """
                 Find periods that were outliers for the given dataset using a Z-score ??
@@ -159,13 +164,15 @@ class OutlierEvents(BaseEvents):
                 """
         # read data
         data = self.data
-        if len(data) > 15:
-            mean = np.nanmean(data.values)
-            sd = np.nanstd(data.values)
-            z_score = (data.values - mean) / sd
-            # the record is outlier when z-score is lower -3 or higher than 3
-            is_outlier = (z_score > 3) | (z_score < -3)
+        mean = np.nanmean(data.values)
+        sd = np.nanstd(data.values)
+        z_score = (data.values - mean) / sd
+        # the record is outlier when z-score is lower -3 or higher than 3
+        is_outlier = (z_score > 3) | (z_score < -3)
 
-            # only save outliers
-            data_outlier = data[is_outlier]
-            self._outliers = data_outlier
+        # only save outliers
+        outlier = BaseEpoch()
+        outlier.value = data.values[is_outlier]
+        outlier.date = data.index[is_outlier]
+
+        self.outliers = outlier
