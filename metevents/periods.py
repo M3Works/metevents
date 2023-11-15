@@ -46,3 +46,10 @@ class CumulativePeriod(BaseTimePeriod):
 
     def __repr__(self):
         return f"Cumulative Period ({self.start.isoformat()} - {self.stop.isoformat()})"
+
+
+class BaseEpoch:
+
+    def __int__(self, value, date):
+        self.value = value
+        self.date = date

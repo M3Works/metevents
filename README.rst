@@ -13,7 +13,7 @@ metevents
         :alt: Documentation Status
 
 
-Meteorlogical Events
+Meteorological Events
 
 metevents is a python library created with the goal of consistent, simple identification of
 meteorology timeseries data. metevents is developed by `M3 Works <https://m3works.io>`_ as a tool
