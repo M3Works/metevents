@@ -23,6 +23,10 @@ class BaseEvents:
     def N(self):
         return len(self.events)
 
+    @property
+    def values(self):
+        return [e.value for e in self.events]
+
     def find(self, *args, **kwargs):
         """
         Function to be defined for specific events in timeseries data. Performs
@@ -151,8 +155,6 @@ class OutlierEvents(BaseEvents):
     def __init__(self, data):
         super().__init__(data)
 
-        self.outliers = None
-
     def find(self):
         """
                 Find periods that were outliers for the given dataset using a Z-score ??
@@ -171,8 +173,13 @@ class OutlierEvents(BaseEvents):
         is_outlier = (z_score > 3) | (z_score < -3)
 
         # only save outliers
-        outlier = BaseEpoch()
-        outlier.value = data.values[is_outlier]
-        outlier.date = data.index[is_outlier]
+        for d, v in data[is_outlier].items():
+            self._events.append(BaseEpoch(v, d))
 
-        self.outliers = outlier
+    @property
+    def outliers(self):
+        return self._events
+
+    @property
+    def dates(self):
+        return [e.date for e in self.events]

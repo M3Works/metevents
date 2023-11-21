@@ -102,8 +102,7 @@ class TestOutlierEvents:
     ])
     def test_outliers_value(self, outlier_storms, data, outliers_value):
         outlier_storms.find()
-        results = outlier_storms.outliers.value
-        assert np.all(results == outliers_value)
+        assert np.all(outlier_storms.values == outliers_value)
 
     @pytest.mark.parametrize('data, outliers_date', [
         ([2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
@@ -112,8 +111,7 @@ class TestOutlierEvents:
     ])
     def test_outliers_date(self, outlier_storms, data, outliers_date):
         outlier_storms.find()
-        results = outlier_storms.outliers.date
-        assert np.all(results == outliers_date)
+        assert np.all(outlier_storms.dates == outliers_date)
 
     @pytest.mark.parametrize('data', [
         ([2, 2, 2, 2])
@@ -136,7 +134,7 @@ class TestOutlierEvents:
 
         outlier_storms.find()
         tolerance = 1e-10
-        results = outlier_storms.outliers.value
+        results = outlier_storms.values
         expect_value = pytest.approx(out_value, rel=tolerance, abs=tolerance)
         assert np.all(results == expect_value)
 
@@ -156,7 +154,7 @@ class TestOutlierEvents:
         )
 
         outlier_storms.find()
-        results = outlier_storms.outliers.date
+        results = outlier_storms.dates
         assert np.all(results == out_date)
 
     @pytest.mark.parametrize('station_id, start, stop, source', [

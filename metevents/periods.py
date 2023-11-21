@@ -50,6 +50,6 @@ class CumulativePeriod(BaseTimePeriod):
 
 class BaseEpoch:
 
-    def __int__(self, value, date):
+    def __init__(self, value, date):
         self.value = value
         self.date = date
