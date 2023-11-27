@@ -11,7 +11,7 @@ with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
 requirements = [
-    'metloom>=0.3.5,<1.0.0',
+    'metloom>=0.3.0,<1.0.0',
     'scipy>=1.7.1,<2.0'
 ]
 
@@ -47,6 +47,6 @@ setup(
     test_suite='tests',
     tests_require=test_requirements,
     url='https://github.com/M3Works/metevents',
-    version='0.1.0',
+    version='0.2.1',
     zip_safe=False,
 )
