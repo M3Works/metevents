@@ -12,6 +12,7 @@ with open('HISTORY.rst') as history_file:
 
 requirements = [
     'metloom>=0.3.0,<1.0.0',
+    'scipy>=1.7.1,<2.0'
 ]
 
 test_requirements = ['pytest>=3', ]
