@@ -167,8 +167,10 @@ class StormEvents(BaseEvents):
 
 class SpikeValleyEvent(BaseEvents):
 
-    def find(self, height=None, threshold=None, prominence=100.0,
-            width=None):
+    def find(
+            self, height=None, threshold=None, prominence=100.0,
+            width=None
+    ):
         """
         Find instances of spikes or valleys within a timeseries
 
