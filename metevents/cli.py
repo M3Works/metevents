@@ -29,10 +29,10 @@ def main():
     storm_parser = subparsers.add_parser(
         "storm", help="Find storm events"
     )
-    storm_parser.add_argument('--instant-mass-to-start', '-ims', default=0.1, help="mass per time step to consider the beginning of a storm")
-    storm_parser.add_argument('--min-storm-total', '-mst', default=0.5, help="total storm mass to be considered a complete storm")
-    storm_parser.add_argument('--hours-to-stop', '-hts', default=24, help="minimum hours of mass less than instant threshold to end a storm")
-    storm_parser.add_argument('--max-storm-hours', '-msh', default=336, help="maximum hours a storm can continue")
+    storm_parser.add_argument('--instant-mass-to-start', '-ims', type=float, default=0.1, help="mass per time step to consider the beginning of a storm")
+    storm_parser.add_argument('--min-storm-total', '-mst', type=float, default=0.5, help="total storm mass to be considered a complete storm")
+    storm_parser.add_argument('--hours-to-stop', '-hts', type=float, default=24, help="minimum hours of mass less than instant threshold to end a storm")
+    storm_parser.add_argument('--max-storm-hours', '-msh', type=float, default=336, help="maximum hours a storm can continue")
 
     args = parser.parse_args()
     if args.wateryear:

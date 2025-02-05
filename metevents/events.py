@@ -155,7 +155,8 @@ class StormEvents(BaseEvents):
         return fig, ax
     
     def to_dataframe(self):
-        return pd.DataFrame([[e.start, e.stop, e.duration, round(e.total, 2)] for e in self._events],
+        print(type(self._events[0].duration))
+        return pd.DataFrame([[e.start, e.stop, e.duration.days, round(e.total, 2)] for e in self._events],
                             columns=['start', 'stop', 'duration', 'total'])
 
 
@@ -170,7 +171,7 @@ class StormEvents(BaseEvents):
             station_id: string id of the station of interest
             start: Datetime object when to start looking for data
             stop: Datetime object when to stop looking for data
-            source: Network/datasource to search for data options:
+            source: Network/datasource to search for data options:∆
                 NRCS, mesowest, CDEC
             station_name: String name of the station to pass to pointdata
         """
