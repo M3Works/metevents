@@ -1,4 +1,4 @@
-
+import datetime
 def determine_freq(series):
     """
     If the frequency string is not known, try to figure it out.
@@ -13,3 +13,10 @@ def determine_freq(series):
         if len(result) == 1:
             freq = result[0].resolution_string
     return freq
+
+def current_water_year():
+    today = datetime.date.today()
+    if today.month >= 10:
+        return today.year + 1
+    else:
+        return today.year

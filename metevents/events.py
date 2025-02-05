@@ -5,6 +5,7 @@ from datetime import timedelta
 from metloom.pointdata import CDECPointData, SnotelPointData, MesowestPointData
 from pandas.tseries.frequencies import to_offset
 from scipy.signal import find_peaks
+import matplotlib.pyplot as plt
 
 # local imports
 from metevents.periods import CumulativePeriod, BaseTimePeriod
@@ -35,6 +36,18 @@ class BaseEvents:
         the actual detection of the events. Should assign self._events
         """
         raise NotImplementedError("find function not implemented.")
+
+    def to_plot(self, *args, **kwargs):
+        """
+        Function to be defined for plotting the event data.
+        """
+        raise NotImplementedError("plot function not implemented.")
+
+    def to_dataframe(self, *args, **kwargs):
+        """
+        Function to be defined for exporting the event data.
+        """
+        raise NotImplementedError("csv function not implemented.")
 
     @staticmethod
     def group_condition_by_time(ind):
@@ -120,6 +133,32 @@ class StormEvents(BaseEvents):
                 # Update start for the next storm
                 start = next_start
 
+    def to_plot(self):
+        """
+        Plot the station data highlightng the storm events
+        """
+        # The structure of this can make plotting them convenient.
+        fig, ax = plt.subplots(1)
+        fig.suptitle(f"Storm Events at {self.data.attrs['station_src']}:{self.data.attrs['station_id']}")
+        ax.set_ylabel("Cumulative Precip. [in]")
+        ax.set_xlabel('Date')
+        cumulative = self.data.cumsum()
+        top = cumulative.max()
+
+        # Loop over the events and fill in between where our storms are
+        for event in self._events:
+            ax.fill_between([event.start, event.stop], top, color='blue', alpha=0.2)
+
+        # Plot over the accumulated precip data
+        ax.plot(cumulative, color='black')
+
+        return fig, ax
+    
+    def to_dataframe(self):
+        return pd.DataFrame([[e.start, e.stop, e.duration, round(e.total, 2)] for e in self._events],
+                            columns=['start', 'stop', 'duration', 'total'])
+
+
     @classmethod
     def from_station(cls, station_id, start, stop, station_name='unknown',
                      source='NRCS'):
@@ -162,7 +201,9 @@ class StormEvents(BaseEvents):
         else:
             df = df.reset_index().set_index('datetime')
 
-        return cls(df[variable.name].diff())
+        df = df[variable.name].diff()
+        df.attrs = dict(station_src=source, station_id=station_id)
+        return cls(df)
 
 
 class SpikeValleyEvent(BaseEvents):
